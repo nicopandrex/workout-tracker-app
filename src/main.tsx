@@ -1,6 +1,7 @@
-import { StrictMode, useEffect } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { router } from "@/router";
@@ -15,6 +16,7 @@ createRoot(document.getElementById("root")!).render(
     <QueryProvider>
       <RouterProvider router={router} />
       <Toaster duration={3000} />
+      <SpeedInsights />
     </QueryProvider>
   </StrictMode>
 );
