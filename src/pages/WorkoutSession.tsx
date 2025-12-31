@@ -409,7 +409,10 @@ export function WorkoutSession() {
                 toast.success("Rest complete! 💪");
                 setActiveRestTimer(null);
               }}
-              onDismiss={() => setActiveRestTimer(null)}
+              onDismiss={() => {
+                localStorage.removeItem('rest-timer-end-time');
+                setActiveRestTimer(null);
+              }}
             />
           )}
         </CardContent>

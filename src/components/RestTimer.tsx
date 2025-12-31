@@ -39,7 +39,27 @@ export function RestTimer({
   onComplete,
   onDismiss,
 }: RestTimerProps) {
-  const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
+  const endTimeRef = useRef<number>(0);
+  
+  const [secondsLeft, setSecondsLeft] = useState(() => {
+    // On mount, check if there's a stored end time
+    const stored = localStorage.getItem(TIMER_STORAGE_KEY);
+    if (stored) {
+      const endTime = parseInt(stored, 10);
+      const now = Date.now();
+      const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
+      if (remaining > 0) {
+        endTimeRef.current = endTime;
+        return remaining;
+      }
+      localStorage.removeItem(TIMER_STORAGE_KEY);
+    }
+    // No stored timer, create a new end time
+    const newEndTime = Date.now() + initialSeconds * 1000;
+    endTimeRef.current = newEndTime;
+    localStorage.setItem(TIMER_STORAGE_KEY, newEndTime.toString());
+    return initialSeconds;
+  });
   const [isPaused, setIsPaused] = useState(false);
   const onCompleteRef = useRef(onComplete);
   const hasNotifiedRef = useRef(false);
@@ -51,31 +71,34 @@ export function RestTimer({
 
   // Save timer end time to localStorage whenever it changes
   useEffect(() => {
-    if (secondsLeft > 0) {
-      const endTime = Date.now() + secondsLeft * 1000;
-      localStorage.setItem(TIMER_STORAGE_KEY, endTime.toString());
+    if (secondsLeft > 0 && endTimeRef.current > 0) {
+      localStorage.setItem(TIMER_STORAGE_KEY, endTimeRef.current.toString());
     } else {
       localStorage.removeItem(TIMER_STORAGE_KEY);
     }
   }, [secondsLeft]);
 
-  // Main timer effect
+  // Main timer effect - recalculate from end time on each tick
   useEffect(() => {
     if (isPaused) return;
 
     const interval = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
+      if (endTimeRef.current > 0) {
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((endTimeRef.current - now) / 1000));
+        
+        if (remaining <= 0) {
           if (!hasNotifiedRef.current) {
             onCompleteRef.current?.();
             showNotification();
             hasNotifiedRef.current = true;
           }
           localStorage.removeItem(TIMER_STORAGE_KEY);
-          return 0;
+          setSecondsLeft(0);
+        } else {
+          setSecondsLeft(remaining);
         }
-        return prev - 1;
-      });
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -97,7 +120,9 @@ export function RestTimer({
   };
 
   const addTime = (seconds: number) => {
-    setSecondsLeft((prev) => Math.max(0, prev + seconds));
+    const newSeconds = Math.max(0, secondsLeft + seconds);
+    endTimeRef.current = Date.now() + newSeconds * 1000;
+    setSecondsLeft(newSeconds);
   };
 
   const progress = (secondsLeft / initialSeconds) * 100;
