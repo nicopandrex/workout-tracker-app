@@ -195,7 +195,7 @@ export function Analytics() {
                 <p className="text-3xl font-bold text-white">
                   {formatVolume(workoutStats.totalVolume)}
                 </p>
-                <p className="text-xs text-slate-400">Volume (kg)</p>
+                <p className="text-xs text-slate-400">Volume (lbs)</p>
               </div>
             </div>
           </CardContent>
@@ -214,13 +214,13 @@ export function Analytics() {
                     variant="outline"
                     className="border-emerald-500/50 text-emerald-400"
                   >
-                    PR: {displayStats.maxWeight}kg
+                    PR: {displayStats.maxWeight}lbs
                   </Badge>
                   <Badge
                     variant="outline"
                     className="border-blue-500/50 text-blue-400"
                   >
-                    e1RM: {Math.round(displayStats.estimatedOneRepMax)}kg
+                    e1RM: {Math.round(displayStats.estimatedOneRepMax)}lbs
                   </Badge>
                 </div>
               )}
@@ -405,25 +405,25 @@ export function Analytics() {
                       <div>
                         <p className="text-slate-500 text-xs">PR Weight</p>
                         <p className="text-emerald-400 font-semibold">
-                          {stats.maxWeight}kg
+                          {stats.maxWeight}lbs
                         </p>
                       </div>
                       <div>
                         <p className="text-slate-500 text-xs">Est. 1RM</p>
                         <p className="text-blue-400 font-semibold">
-                          {Math.round(stats.estimatedOneRepMax)}kg
+                          {Math.round(stats.estimatedOneRepMax)}lbs
                         </p>
                       </div>
                       <div>
                         <p className="text-slate-500 text-xs">Best Set</p>
                         <p className="text-purple-400 font-semibold">
-                          {stats.bestSet.weight}kg × {stats.bestSet.reps}
+                          {stats.bestSet.weight}lbs × {stats.bestSet.reps}
                         </p>
                       </div>
                       <div>
                         <p className="text-slate-500 text-xs">Total Volume</p>
                         <p className="text-teal-400 font-semibold">
-                          {formatVolume(stats.totalVolume)}kg
+                          {formatVolume(stats.totalVolume)}lbs
                         </p>
                       </div>
                     </div>

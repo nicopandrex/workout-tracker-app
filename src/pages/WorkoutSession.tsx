@@ -147,7 +147,7 @@ function SetInputRow({
               placeholder="Weight"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">
-              kg
+              lbs
             </span>
           </div>
           <div className="relative">
@@ -175,7 +175,7 @@ function SetInputRow({
       {previousData && (
         <div className="ml-10 text-xs text-slate-500 flex items-center gap-2">
           <span>
-            Last: {previousData.weight}kg × {previousData.reps} reps
+            Last: {previousData.weight}lbs × {previousData.reps} reps
           </span>
           {prResult.isPR && (
             <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50">
