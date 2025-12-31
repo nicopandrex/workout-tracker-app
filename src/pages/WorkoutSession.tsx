@@ -273,7 +273,17 @@ export function WorkoutSession() {
   const removeSet = useRemoveSet();
   const completeSession = useCompleteSession();
 
-  const [activeRestTimer, setActiveRestTimer] = useState<number | null>(null);
+  const [activeRestTimer, setActiveRestTimer] = useState<number | null>(() => {
+    // Restore active timer from localStorage
+    const stored = localStorage.getItem('rest-timer-end-time');
+    if (stored) {
+      const endTime = parseInt(stored, 10);
+      const now = Date.now();
+      const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
+      return remaining > 0 ? remaining : null;
+    }
+    return null;
+  });
 
   const timer = useTimer(session?.startedAt || new Date().toISOString());
 
@@ -347,12 +357,10 @@ export function WorkoutSession() {
 
   const handleSetCompleted = useCallback(
     (restSeconds: number) => {
-      // Only start timer if one isn't already running
-      if (!activeRestTimer) {
-        setActiveRestTimer(restSeconds);
-      }
+      // Start timer (will replace existing timer)
+      setActiveRestTimer(restSeconds);
     },
-    [activeRestTimer]
+    []
   );
 
   if (isLoading || !session) {

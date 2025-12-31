@@ -43,38 +43,21 @@ export function RestTimer({
   const [isPaused, setIsPaused] = useState(false);
   const onCompleteRef = useRef(onComplete);
   const hasNotifiedRef = useRef(false);
-  const initializedRef = useRef(false);
-
-  // Initialize from localStorage on first mount
-  useEffect(() => {
-    if (!initializedRef.current) {
-      const stored = localStorage.getItem(TIMER_STORAGE_KEY);
-      if (stored) {
-        const endTime = parseInt(stored, 10);
-        const now = Date.now();
-        const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
-        if (remaining > 0) {
-          setSecondsLeft(remaining);
-        } else {
-          localStorage.removeItem(TIMER_STORAGE_KEY);
-        }
-      }
-      initializedRef.current = true;
-    }
-  }, []);
 
   // Keep the ref updated
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
-  // Save timer end time to localStorage
+  // Save timer end time to localStorage whenever it changes
   useEffect(() => {
-    if (!isPaused && secondsLeft > 0) {
+    if (secondsLeft > 0) {
       const endTime = Date.now() + secondsLeft * 1000;
       localStorage.setItem(TIMER_STORAGE_KEY, endTime.toString());
+    } else {
+      localStorage.removeItem(TIMER_STORAGE_KEY);
     }
-  }, [secondsLeft, isPaused]);
+  }, [secondsLeft]);
 
   // Main timer effect
   useEffect(() => {
