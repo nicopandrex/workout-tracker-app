@@ -9,6 +9,31 @@ interface RestTimerProps {
   onDismiss: () => void;
 }
 
+const TIMER_STORAGE_KEY = "rest-timer-end-time";
+
+// Show notification
+const showNotification = () => {
+  if (Notification.permission === "granted") {
+    const notification = new Notification("Rest Complete! 💪", {
+      body: "Time to start your next set!",
+      icon: "/pwa-192x192.png",
+      badge: "/pwa-192x192.png",
+      tag: "rest-timer",
+      requireInteraction: true,
+      vibrate: [200, 100, 200],
+    });
+
+    // Play a sound (optional)
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjGO1PXPgjMGHGm68eaPMwgUVqvl7LNZFQpFnuD0wXEdBzCM0/XShDQGHGu78uaQNAkVWLDm7bRaFgpGns/0w3IdBzCM0/XRhDQGHGu78uaQNAkVWLDm7bRaFgpGntD0w3IdBzCM0/XRhDQGHGu78uaQNAkVWLDm7bRaFgpGntD0w3IdBzCM0/XRhDQGHGu78uaQNAkVWLDm7bRaFgpGntD0w3IdBzCM0/XRhDQGHGu78uaQNAkVWLDm7bRaFgpGntD0w3IdBzCM0/XRhDQGHGu78uaQNAkVWLDm7bRaFg==');
+    audio.play().catch(() => {}); // Ignore if audio fails
+    
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+  }
+};
+
 export function RestTimer({
   initialSeconds,
   onComplete,
@@ -17,19 +42,53 @@ export function RestTimer({
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
   const [isPaused, setIsPaused] = useState(false);
   const onCompleteRef = useRef(onComplete);
+  const hasNotifiedRef = useRef(false);
+  const initializedRef = useRef(false);
+
+  // Initialize from localStorage on first mount
+  useEffect(() => {
+    if (!initializedRef.current) {
+      const stored = localStorage.getItem(TIMER_STORAGE_KEY);
+      if (stored) {
+        const endTime = parseInt(stored, 10);
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
+        if (remaining > 0) {
+          setSecondsLeft(remaining);
+        } else {
+          localStorage.removeItem(TIMER_STORAGE_KEY);
+        }
+      }
+      initializedRef.current = true;
+    }
+  }, []);
 
   // Keep the ref updated
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
+  // Save timer end time to localStorage
+  useEffect(() => {
+    if (!isPaused && secondsLeft > 0) {
+      const endTime = Date.now() + secondsLeft * 1000;
+      localStorage.setItem(TIMER_STORAGE_KEY, endTime.toString());
+    }
+  }, [secondsLeft, isPaused]);
+
+  // Main timer effect
   useEffect(() => {
     if (isPaused) return;
 
     const interval = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
-          onCompleteRef.current?.();
+          if (!hasNotifiedRef.current) {
+            onCompleteRef.current?.();
+            showNotification();
+            hasNotifiedRef.current = true;
+          }
+          localStorage.removeItem(TIMER_STORAGE_KEY);
           return 0;
         }
         return prev - 1;
@@ -38,6 +97,15 @@ export function RestTimer({
 
     return () => clearInterval(interval);
   }, [isPaused]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (secondsLeft === 0) {
+        localStorage.removeItem(TIMER_STORAGE_KEY);
+      }
+    };
+  }, [secondsLeft]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

@@ -277,6 +277,19 @@ export function WorkoutSession() {
 
   const timer = useTimer(session?.startedAt || new Date().toISOString());
 
+  // Request notification permission on first workout
+  useEffect(() => {
+    const hasAsked = localStorage.getItem('notification-permission-asked');
+    if (!hasAsked && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then((permission) => {
+        localStorage.setItem('notification-permission-asked', 'true');
+        if (permission === 'granted') {
+          toast.success('Notifications enabled! You\'ll be notified when rest is complete.');
+        }
+      });
+    }
+  }, []);
+
   const previousSessions =
     allSessions?.filter((s) => s.id !== id && s.isCompleted) || [];
 
