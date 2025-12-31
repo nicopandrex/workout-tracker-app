@@ -40,6 +40,7 @@ export function RestTimer({
   onDismiss,
 }: RestTimerProps) {
   const endTimeRef = useRef<number>(0);
+  const wakeLockRef = useRef<any>(null);
   
   const [secondsLeft, setSecondsLeft] = useState(() => {
     // On mount, check if there's a stored end time
@@ -69,12 +70,53 @@ export function RestTimer({
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
-  // Save timer end time to localStorage whenever it changes
+  // Request wake lock to keep screen on during timer
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+          console.log('Wake Lock active');
+        }
+      } catch (err) {
+        console.log('Wake Lock error:', err);
+      }
+    };
+
+    requestWakeLock();
+
+    // Release wake lock on unmount
+    return () => {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().then(() => {
+          console.log('Wake Lock released');
+          wakeLockRef.current = null;
+        });
+      }
+    };
+  }, []);
+
+  // Save timer end time to localStorage and notify service worker
   useEffect(() => {
     if (secondsLeft > 0 && endTimeRef.current > 0) {
       localStorage.setItem(TIMER_STORAGE_KEY, endTimeRef.current.toString());
+      
+      // Notify service worker about the timer
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'START_TIMER',
+          endTime: endTimeRef.current
+        });
+      }
     } else {
       localStorage.removeItem(TIMER_STORAGE_KEY);
+      
+      // Tell service worker to stop checking
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'STOP_TIMER'
+        });
+      }
     }
   }, [secondsLeft]);
 
@@ -103,6 +145,29 @@ export function RestTimer({
 
     return () => clearInterval(interval);
   }, [isPaused]);
+
+  // Check for expired timer when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && endTimeRef.current > 0) {
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((endTimeRef.current - now) / 1000));
+        
+        if (remaining <= 0 && !hasNotifiedRef.current) {
+          onCompleteRef.current?.();
+          showNotification();
+          hasNotifiedRef.current = true;
+          localStorage.removeItem(TIMER_STORAGE_KEY);
+          setSecondsLeft(0);
+        } else {
+          setSecondsLeft(remaining);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
