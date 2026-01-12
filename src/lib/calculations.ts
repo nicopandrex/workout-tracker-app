@@ -132,18 +132,25 @@ export const groupUnilateralSets = (
     }
   });
 
-  // Calculate averages for each pair
-  return Array.from(grouped.values()).map(pair => {
-    const leftWeight = pair.left?.weight || 0;
-    const rightWeight = pair.right?.weight || 0;
-    const leftReps = pair.left?.reps || 0;
-    const rightReps = pair.right?.reps || 0;
-    
-    return {
-      weight: (leftWeight + rightWeight) / 2,
-      reps: Math.round((leftReps + rightReps) / 2),
-    };
-  });
+  // Calculate averages for each pair - only include pairs where BOTH sides have valid data
+  return Array.from(grouped.values())
+    .filter(pair => {
+      // Both sides must exist and have valid data
+      return pair.left && pair.right && 
+             pair.left.weight > 0 && pair.left.reps > 0 &&
+             pair.right.weight > 0 && pair.right.reps > 0;
+    })
+    .map(pair => {
+      const leftWeight = pair.left!.weight;
+      const rightWeight = pair.right!.weight;
+      const leftReps = pair.left!.reps;
+      const rightReps = pair.right!.reps;
+      
+      return {
+        weight: (leftWeight + rightWeight) / 2,
+        reps: Math.round((leftReps + rightReps) / 2),
+      };
+    });
 };
 
 /**

@@ -224,15 +224,24 @@ export const sessionStorage = {
         exerciseName: ex.exerciseName,
         order: ex.order,
         restTimeSeconds: ex.restTimeSeconds,
-        // For unilateral exercises, start with empty sets (user will add L+R pairs)
-        // For bilateral exercises, create default sets
-        setLogs: isUnilateral ? [] : Array.from({ length: ex.defaultSets }, (_, i) => ({
-          id: generateId(),
-          setIndex: i,
-          weight: 0,
-          reps: 0,
-          createdAt: now,
-        })),
+        // For unilateral exercises, create L+R pairs for each default set
+        // For bilateral exercises, create default sets normally
+        setLogs: isUnilateral 
+          ? Array.from({ length: ex.defaultSets * 2 }, (_, i) => ({
+              id: generateId(),
+              setIndex: Math.floor(i / 2),
+              weight: 0,
+              reps: 0,
+              side: (i % 2 === 0 ? 'left' : 'right') as 'left' | 'right',
+              createdAt: now,
+            }))
+          : Array.from({ length: ex.defaultSets }, (_, i) => ({
+              id: generateId(),
+              setIndex: i,
+              weight: 0,
+              reps: 0,
+              createdAt: now,
+            })),
       };
     });
 
