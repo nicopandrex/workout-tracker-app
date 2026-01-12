@@ -279,7 +279,7 @@ export const sessionStorage = {
     });
   },
 
-  addSet: (sessionId: string, exerciseLogId: string): Session | null => {
+  addSet: (sessionId: string, exerciseLogId: string, side?: 'left' | 'right'): Session | null => {
     const session = sessionStorage.getById(sessionId);
     if (!session) return null;
 
@@ -292,6 +292,7 @@ export const sessionStorage = {
       weight: 0,
       reps: 0,
       createdAt: new Date().toISOString(),
+      ...(side && { side }),
     };
 
     exerciseLog.setLogs.push(newSet);

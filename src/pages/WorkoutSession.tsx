@@ -9,6 +9,7 @@ import {
   useCompleteSession,
   useSessions,
 } from "@/hooks/useSessions";
+import { useExercises } from "@/hooks/useExercises";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RestTimer } from "@/components/RestTimer";
 import { toast } from "sonner";
-import { detectPR, getPreviousSetData } from "@/lib/prDetection";
+import { detectPR, getPreviousSetData, getExercisePR } from "@/lib/prDetection";
 import { formatDistance } from "date-fns";
 import { ExerciseLog, SetLog } from "@/types";
 
@@ -71,6 +72,7 @@ function SetInputRow({
   exerciseLogId,
   previousSessions,
   restTimeSeconds,
+  isUnilateral,
   onUpdate,
   onRemove,
   onSetCompleted,
@@ -82,6 +84,7 @@ function SetInputRow({
   exerciseLogId: string;
   previousSessions: any[];
   restTimeSeconds?: number;
+  isUnilateral?: boolean;
   onUpdate: (setLogId: string, updates: Partial<SetLog>) => void;
   onRemove: () => void;
   onSetCompleted: (restSeconds: number) => void;
@@ -95,6 +98,7 @@ function SetInputRow({
     setIndex,
     previousSessions
   );
+  const exercisePR = getExercisePR(exerciseId, previousSessions);
   const prResult = detectPR(
     parseFloat(weight) || 0,
     parseInt(reps) || 0,
@@ -132,10 +136,18 @@ function SetInputRow({
     setIsEditing(true);
   };
 
+  // For unilateral exercises, show the side badge
+  const sideLabel = set.side ? (set.side === 'left' ? 'L' : 'R') : null;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <span className="text-slate-400 w-8 text-sm">#{setIndex + 1}</span>
+        {sideLabel && (
+          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50 text-xs px-1.5">
+            {sideLabel}
+          </Badge>
+        )}
         <div className="flex-1 grid grid-cols-2 gap-2">
           <div className="relative">
             <Input
@@ -172,20 +184,31 @@ function SetInputRow({
           <Minus className="w-4 h-4" />
         </Button>
       </div>
-      {previousData && (
-        <div className="ml-10 text-xs text-slate-500 flex items-center gap-2">
-          <span>
-            Last: {previousData.weight}lbs × {previousData.reps} reps
-          </span>
-          {prResult.isPR && (
-            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50">
-              ↑ PR
-            </Badge>
+      {(previousData || exercisePR) && (
+        <div className="ml-10 text-xs space-y-1">
+          {previousData && (
+            <div className="flex items-center gap-2 text-slate-500">
+              <span>
+                Last: {previousData.weight}lbs × {previousData.reps} reps
+              </span>
+              {prResult.isMatch && (
+                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs">
+                  ✓ Match
+                </Badge>
+              )}
+            </div>
           )}
-          {prResult.isMatch && (
-            <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
-              ✓ Match
-            </Badge>
+          {exercisePR && (
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-400">
+                PR: {exercisePR.weight}lbs × {exercisePR.reps} reps
+              </span>
+              {prResult.isPR && (
+                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50 text-xs">
+                  ↑ NEW PR!
+                </Badge>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -197,6 +220,7 @@ function ExerciseSection({
   exerciseLog,
   sessionId,
   previousSessions,
+  isUnilateral,
   onUpdateSet,
   onAddSet,
   onRemoveSet,
@@ -205,6 +229,7 @@ function ExerciseSection({
   exerciseLog: ExerciseLog;
   sessionId: string;
   previousSessions: any[];
+  isUnilateral?: boolean;
   onUpdateSet: (
     exerciseLogId: string,
     setLogId: string,
@@ -240,6 +265,7 @@ function ExerciseSection({
                 exerciseLogId={exerciseLog.id}
                 previousSessions={previousSessions}
                 restTimeSeconds={exerciseLog.restTimeSeconds}
+                isUnilateral={isUnilateral}
                 onUpdate={(setLogId, updates) =>
                   onUpdateSet(exerciseLog.id, setLogId, updates)
                 }
@@ -255,7 +281,7 @@ function ExerciseSection({
             className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Set
+            Add Set{isUnilateral ? ' (L+R)' : ''}
           </Button>
         </div>
       </AccordionContent>
@@ -268,6 +294,7 @@ export function WorkoutSession() {
   const navigate = useNavigate();
   const { data: session, isLoading } = useSession(id!);
   const { data: allSessions } = useSessions();
+  const { data: exercises = [] } = useExercises();
   const updateSetLog = useUpdateSetLog();
   const addSet = useAddSet();
   const removeSet = useRemoveSet();
@@ -327,8 +354,20 @@ export function WorkoutSession() {
   const handleAddSet = async (exerciseLogId: string) => {
     if (!id) return;
     try {
-      await addSet.mutateAsync({ sessionId: id, exerciseLogId });
-      toast.success("Set added");
+      // Find the exercise to check if it's unilateral
+      const exerciseLog = session?.exerciseLogs.find(log => log.id === exerciseLogId);
+      const exercise = exercises.find(e => e.id === exerciseLog?.exerciseId);
+      
+      if (exercise?.isUnilateral) {
+        // Add both left and right sets for unilateral exercises
+        await addSet.mutateAsync({ sessionId: id, exerciseLogId, side: 'left' });
+        await addSet.mutateAsync({ sessionId: id, exerciseLogId, side: 'right' });
+        toast.success("Sets added (L+R)");
+      } else {
+        // Add a single set for bilateral exercises
+        await addSet.mutateAsync({ sessionId: id, exerciseLogId });
+        toast.success("Set added");
+      }
     } catch (error) {
       toast.error("Failed to add set");
     }
@@ -425,18 +464,22 @@ export function WorkoutSession() {
         </CardHeader>
         <CardContent>
           <Accordion type="multiple" className="space-y-2">
-            {session.exerciseLogs.map((exerciseLog) => (
-              <ExerciseSection
-                key={exerciseLog.id}
-                exerciseLog={exerciseLog}
-                sessionId={session.id}
-                previousSessions={previousSessions}
-                onUpdateSet={handleUpdateSet}
-                onAddSet={handleAddSet}
-                onRemoveSet={handleRemoveSet}
-                onSetCompleted={handleSetCompleted}
-              />
-            ))}
+            {session.exerciseLogs.map((exerciseLog) => {
+              const exercise = exercises.find(e => e.id === exerciseLog.exerciseId);
+              return (
+                <ExerciseSection
+                  key={exerciseLog.id}
+                  exerciseLog={exerciseLog}
+                  sessionId={session.id}
+                  previousSessions={previousSessions}
+                  isUnilateral={exercise?.isUnilateral}
+                  onUpdateSet={handleUpdateSet}
+                  onAddSet={handleAddSet}
+                  onRemoveSet={handleRemoveSet}
+                  onSetCompleted={handleSetCompleted}
+                />
+              );
+            })}
           </Accordion>
         </CardContent>
       </Card>

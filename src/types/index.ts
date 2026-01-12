@@ -55,6 +55,7 @@ export interface Exercise {
   equipment: Equipment;
   primaryMuscleGroup: MuscleGroup;
   secondaryMuscleGroup?: MuscleGroup;
+  isUnilateral?: boolean; // Track left and right sides separately
   createdAt: string;
 }
 
@@ -89,6 +90,7 @@ export interface SetLog {
   reps: number;
   rpe?: number;
   notes?: string;
+  side?: 'left' | 'right'; // For unilateral exercises
   createdAt: string;
 }
 

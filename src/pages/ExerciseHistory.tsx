@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { groupUnilateralSets } from "@/lib/calculations";
 
 export function ExerciseHistory() {
   const { id } = useParams<{ id: string }>();
@@ -38,11 +39,17 @@ export function ExerciseHistory() {
 
   // Calculate stats
   const allSets = exerciseHistory.flatMap((item) => item.exerciseLog!.setLogs);
+  
+  // For unilateral exercises, average the left and right sides for stats
+  const processedSets = exercise?.isUnilateral 
+    ? groupUnilateralSets(allSets)
+    : allSets;
+    
   const maxWeight =
-    allSets.length > 0 ? Math.max(...allSets.map((s) => s.weight)) : 0;
-  const totalSets = allSets.length;
-  const totalReps = allSets.reduce((sum, s) => sum + s.reps, 0);
-  const totalVolume = allSets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+    processedSets.length > 0 ? Math.max(...processedSets.map((s) => s.weight)) : 0;
+  const totalSets = processedSets.length;
+  const totalReps = processedSets.reduce((sum, s) => sum + s.reps, 0);
+  const totalVolume = processedSets.reduce((sum, s) => sum + s.weight * s.reps, 0);
 
   if (!exercise) {
     return (
@@ -184,7 +191,10 @@ export function ExerciseHistory() {
                       variant="outline"
                       className="border-emerald-500/50 text-emerald-400"
                     >
-                      {exerciseLog!.setLogs.length} sets
+                      {exercise.isUnilateral 
+                        ? `${Math.floor(exerciseLog!.setLogs.length / 2)} sets (L+R)`
+                        : `${exerciseLog!.setLogs.length} sets`
+                      }
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -207,6 +217,11 @@ export function ExerciseHistory() {
                             <span className="text-slate-400 text-sm font-mono w-8">
                               #{idx + 1}
                             </span>
+                            {set.side && (
+                              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50 text-xs px-1.5">
+                                {set.side === 'left' ? 'L' : 'R'}
+                              </Badge>
+                            )}
                             <div className="flex items-center gap-2">
                               <span className="text-white font-semibold">
                                 {set.weight} lbs

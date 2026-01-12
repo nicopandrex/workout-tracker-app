@@ -106,11 +106,13 @@ export const useAddSet = () => {
     mutationFn: ({
       sessionId,
       exerciseLogId,
+      side,
     }: {
       sessionId: string;
       exerciseLogId: string;
+      side?: 'left' | 'right';
     }) => {
-      const result = sessionStorage.addSet(sessionId, exerciseLogId);
+      const result = sessionStorage.addSet(sessionId, exerciseLogId, side);
       if (!result) throw new Error('Failed to add set');
       return Promise.resolve(result);
     },

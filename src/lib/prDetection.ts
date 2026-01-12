@@ -139,3 +139,51 @@ export const compareSets = (
 
   return 0;
 };
+
+/**
+ * Get the personal record (best performance) for an exercise
+ */
+export const getExercisePR = (
+  exerciseId: string,
+  previousSessions: Session[]
+): { weight: number; reps: number; date: string } | null => {
+  const previousSets: Array<SetLog & { date: string }> = [];
+
+  previousSessions
+    .filter((session) => session.isCompleted)
+    .forEach((session) => {
+      const exerciseLog = session.exerciseLogs.find(
+        (log) => log.exerciseId === exerciseId
+      );
+      if (exerciseLog) {
+        exerciseLog.setLogs.forEach((set) => {
+          if (set.weight > 0 && set.reps > 0) {
+            previousSets.push({
+              ...set,
+              date: session.startedAt,
+            });
+          }
+        });
+      }
+    });
+
+  if (previousSets.length === 0) return null;
+
+  // Find the best performance by volume (weight × reps)
+  let bestSet = previousSets[0];
+  let bestScore = bestSet.weight * bestSet.reps;
+
+  previousSets.forEach((set) => {
+    const score = set.weight * set.reps;
+    if (score > bestScore) {
+      bestScore = score;
+      bestSet = set;
+    }
+  });
+
+  return {
+    weight: bestSet.weight,
+    reps: bestSet.reps,
+    date: bestSet.date,
+  };
+};

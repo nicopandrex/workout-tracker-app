@@ -104,3 +104,64 @@ export const calculatePercentageIncrease = (
   if (oldValue === 0) return 0;
   return Math.round(((newValue - oldValue) / oldValue) * 100);
 };
+/**
+ * Group sets by their index for unilateral exercises (left/right pairs)
+ * For bilateral exercises, returns sets as-is
+ */
+export const groupUnilateralSets = (
+  sets: Array<{ weight: number; reps: number; side?: 'left' | 'right'; setIndex: number }>
+): Array<{ weight: number; reps: number }> => {
+  // If no sets have a side property, return as-is (bilateral exercise)
+  const hasUnilateralSets = sets.some(set => set.side);
+  if (!hasUnilateralSets) {
+    return sets;
+  }
+
+  // Group by setIndex (each index should have a left and right)
+  const grouped = new Map<number, { left?: typeof sets[0], right?: typeof sets[0] }>();
+  
+  sets.forEach(set => {
+    if (!grouped.has(set.setIndex)) {
+      grouped.set(set.setIndex, {});
+    }
+    const group = grouped.get(set.setIndex)!;
+    if (set.side === 'left') {
+      group.left = set;
+    } else if (set.side === 'right') {
+      group.right = set;
+    }
+  });
+
+  // Calculate averages for each pair
+  return Array.from(grouped.values()).map(pair => {
+    const leftWeight = pair.left?.weight || 0;
+    const rightWeight = pair.right?.weight || 0;
+    const leftReps = pair.left?.reps || 0;
+    const rightReps = pair.right?.reps || 0;
+    
+    return {
+      weight: (leftWeight + rightWeight) / 2,
+      reps: Math.round((leftReps + rightReps) / 2),
+    };
+  });
+};
+
+/**
+ * Calculate best e1RM for unilateral exercises by averaging left/right pairs
+ */
+export const findBestE1RMForUnilateral = (
+  sets: Array<{ weight: number; reps: number; side?: 'left' | 'right'; setIndex: number }>
+): number => {
+  const averagedSets = groupUnilateralSets(sets);
+  return findBestE1RM(averagedSets);
+};
+
+/**
+ * Calculate total volume for unilateral exercises by averaging left/right pairs
+ */
+export const calculateTotalVolumeForUnilateral = (
+  sets: Array<{ weight: number; reps: number; side?: 'left' | 'right'; setIndex: number }>
+): number => {
+  const averagedSets = groupUnilateralSets(sets);
+  return calculateTotalVolume(averagedSets);
+};

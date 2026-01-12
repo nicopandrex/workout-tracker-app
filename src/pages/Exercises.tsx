@@ -54,6 +54,7 @@ export function Exercises() {
     equipment: Equipment.OTHER,
     primaryMuscleGroup: MuscleGroup.CHEST,
     secondaryMuscleGroup: undefined as MuscleGroup | undefined,
+    isUnilateral: false,
   });
 
   const handleCreateExercise = async () => {
@@ -72,6 +73,7 @@ export function Exercises() {
         equipment: Equipment.OTHER,
         primaryMuscleGroup: MuscleGroup.CHEST,
         secondaryMuscleGroup: undefined,
+        isUnilateral: false,
       });
     } catch (error) {
       toast.error("Failed to create exercise");
@@ -99,6 +101,7 @@ export function Exercises() {
           equipment: editingExercise.equipment,
           primaryMuscleGroup: editingExercise.primaryMuscleGroup,
           secondaryMuscleGroup: editingExercise.secondaryMuscleGroup,
+          isUnilateral: editingExercise.isUnilateral,
         },
       });
       toast.success("Exercise updated!");
@@ -276,6 +279,23 @@ export function Exercises() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="unilateral"
+                  checked={newExercise.isUnilateral}
+                  onChange={(e) =>
+                    setNewExercise({
+                      ...newExercise,
+                      isUnilateral: e.target.checked,
+                    })
+                  }
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900"
+                />
+                <Label htmlFor="unilateral" className="text-white cursor-pointer">
+                  Unilateral (track left & right separately)
+                </Label>
+              </div>
             </div>
             <DialogFooter>
               <Button
@@ -448,6 +468,27 @@ export function Exercises() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-unilateral"
+                  checked={editingExercise?.isUnilateral || false}
+                  onChange={(e) =>
+                    setEditingExercise(
+                      editingExercise
+                        ? {
+                            ...editingExercise,
+                            isUnilateral: e.target.checked,
+                          }
+                        : null
+                    )
+                  }
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900"
+                />
+                <Label htmlFor="edit-unilateral" className="text-white cursor-pointer">
+                  Unilateral (track left & right separately)
+                </Label>
               </div>
             </div>
             <DialogFooter>

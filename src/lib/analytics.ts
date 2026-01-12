@@ -1,5 +1,6 @@
 import { Session } from '@/types';
 import { format, subMonths, subYears, isAfter } from 'date-fns';
+import { groupUnilateralSets } from './calculations';
 
 export interface WorkoutStats {
   totalWorkouts: number;
@@ -148,7 +149,10 @@ export function calculateExerciseStats(
     if (!exerciseName) exerciseName = exerciseLog.exerciseName;
     sessionsCount++;
 
-    exerciseLog.setLogs.forEach((setLog) => {
+    // Group unilateral sets by averaging left/right pairs
+    const processedSets = groupUnilateralSets(exerciseLog.setLogs);
+
+    processedSets.forEach((setLog) => {
       if (setLog.weight > 0 && setLog.reps > 0) {
         totalSets++;
         totalReps += setLog.reps;
@@ -213,11 +217,14 @@ export function getExerciseProgress(
 
     if (!exerciseLog || exerciseLog.setLogs.length === 0) return;
 
+    // Group unilateral sets by averaging left/right pairs
+    const processedSets = groupUnilateralSets(exerciseLog.setLogs);
+
     let sessionMaxWeight = 0;
     let sessionVolume = 0;
     let sessionMaxOneRepMax = 0;
 
-    exerciseLog.setLogs.forEach((setLog) => {
+    processedSets.forEach((setLog) => {
       if (setLog.weight > 0 && setLog.reps > 0) {
         sessionMaxWeight = Math.max(sessionMaxWeight, setLog.weight);
         sessionVolume += setLog.weight * setLog.reps;
