@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Session, CreateSessionInput, SetLog } from '@/types';
-import { sessionStorage, routineStorage } from '@/lib/storage';
+import { sessionStorage, routineStorage, exerciseStorage } from '@/lib/storage';
 
 const QUERY_KEY = 'sessions';
 
@@ -42,7 +42,8 @@ export const useCreateSession = () => {
     mutationFn: async (input: CreateSessionInput) => {
       const routine = routineStorage.getById(input.routineId);
       if (!routine) throw new Error('Routine not found');
-      return Promise.resolve(sessionStorage.create(input, routine));
+      const exercises = exerciseStorage.getAll();
+      return Promise.resolve(sessionStorage.create(input, routine, exercises));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });

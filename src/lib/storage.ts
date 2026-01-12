@@ -208,25 +208,33 @@ export const sessionStorage = {
     );
   },
 
-  create: (input: CreateSessionInput, routine: Routine): Session => {
+  create: (input: CreateSessionInput, routine: Routine, exercises: Exercise[]): Session => {
     const sessions = getFromStorage<Session>(STORAGE_KEYS.SESSIONS);
     const now = new Date().toISOString();
 
     // Create exercise logs from routine exercises
-    const exerciseLogs: ExerciseLog[] = routine.exercises.map((ex) => ({
-      id: generateId(),
-      exerciseId: ex.exerciseId,
-      exerciseName: ex.exerciseName,
-      order: ex.order,
-      restTimeSeconds: ex.restTimeSeconds,
-      setLogs: Array.from({ length: ex.defaultSets }, (_, i) => ({
+    const exerciseLogs: ExerciseLog[] = routine.exercises.map((ex) => {
+      // Find the exercise to check if it's unilateral
+      const exercise = exercises.find(e => e.id === ex.exerciseId);
+      const isUnilateral = exercise?.isUnilateral || false;
+
+      return {
         id: generateId(),
-        setIndex: i,
-        weight: 0,
-        reps: 0,
-        createdAt: now,
-      })),
-    }));
+        exerciseId: ex.exerciseId,
+        exerciseName: ex.exerciseName,
+        order: ex.order,
+        restTimeSeconds: ex.restTimeSeconds,
+        // For unilateral exercises, start with empty sets (user will add L+R pairs)
+        // For bilateral exercises, create default sets
+        setLogs: isUnilateral ? [] : Array.from({ length: ex.defaultSets }, (_, i) => ({
+          id: generateId(),
+          setIndex: i,
+          weight: 0,
+          reps: 0,
+          createdAt: now,
+        })),
+      };
+    });
 
     const newSession: Session = {
       id: generateId(),
